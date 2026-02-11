@@ -1,0 +1,5 @@
+print("29/01")
+print("Curious")
+print("a carreer")
+print("you can")
+print("😜")
