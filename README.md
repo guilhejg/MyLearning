@@ -1,4 +1,4 @@
-# 📘 MyLearning
+# MyLearning
 
 🇺🇸 English
 
