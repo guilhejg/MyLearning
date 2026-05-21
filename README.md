@@ -1,3 +1,6 @@
+<p align="center">
+  <img src="git-assets/banner.png" width="1000">
+</p>
 # MyLearning
 
 🇺🇸 English
