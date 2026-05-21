@@ -1,0 +1,12 @@
+Instructions
+The New York Times is an American daily newspaper that has been around since 1851. Iconic. 📰
+
+Create a newspaper.html file with what was happening in the news on the day you were born!
+
+Find The New York Times newspaper from your birth date by using their Site Map.
+
+Recreate an article's title and a blurb with:
+
+A <h1>-<h3> heading element.
+A <p> paragraph element.
+A <br> line-break element.
