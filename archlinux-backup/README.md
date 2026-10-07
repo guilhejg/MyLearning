@@ -32,6 +32,10 @@ Cada módulo é idempotente. Leia o script antes de rodar: ele usa `sudo`.
 | `bloqueio` | Papel de parede na tela de bloqueio + `Ctrl+Alt+Q` |
 | `fan` | Instala o `fan-modo`: modo `sala` (ventoinha parada até 75°C), `normal` (teto no nível 4) e `max` |
 | `estudante` | Timeshift (snapshots do sistema), firewall `ufw`, Docker com dados em `/home`, tmux/fzf/ripgrep/btop/uv, grupos `docker`/`uucp`/`wireshark` e Rust estável. **Reinicie depois** |
+| `impressao` | CUPS + Avahi/mDNS + SANE; acha e adiciona a primeira impressora IPP da rede (sem driver) |
+| `escanear` | Instala o comando `escanear` (scanner de rede via eSCL, JPEG/PDF) |
+| `claude-titlebar` | Barra de título nativa do XFCE no Claude Desktop (com backup e `off`) |
+| `emacs` | Emacs + Doom Emacs, fontes e ajuste de fonte legível |
 | `dev` | Toolchain de engenharia de computação: C/C++, Python científico, Verilog, AVR/ARM, KiCad, LaTeX, etc. (~2 GB de download) |
 
 ## `eduroam-diag`
@@ -71,3 +75,22 @@ fan-modo -w       # acompanha ao vivo
 
 Faz backup de `/etc/thinkfan.conf` na primeira troca. O modo `sala` mantém níveis de
 emergência para a CPU não passar de ~85°C.
+
+## `escanear`
+
+Escaneia pelo scanner de rede (eSCL/AirScan) **sem depender do SANE**: com `sane-airscan` e
+uma HP Smart Tank, `scanimage -L` devolveu a página web da impressora comprimida em vez da lista.
+
+```bash
+escanear                      # JPEG colorido, 200 dpi, em ~/Documentos/Escaneados
+escanear -f pdf -r 150 -c cinza
+escanear -n 3 -f pdf          # 3 folhas (troca no vidro)
+escanear -i 192.168.0.50      # endereço manual
+```
+
+## `claude-titlebar`
+
+Usa a barra de título do sistema no Claude Desktop (Electron). Troca
+`titleBarStyle:"hidden",titleBarOverlay:!0` por `titleBarStyle:"default",titleBarOverlay:0`
+(mesmo tamanho) no `app.asar`, com backup. Recusa-se a editar se o texto mudou
+(app atualizado). `claude-titlebar off` restaura o original.

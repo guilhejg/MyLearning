@@ -8,7 +8,7 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIN="$HOME/.local/bin"
-BG="$HOME/.local/share/backgrounds"
+BG="$HOME/Documentos/Wallpapers"
 
 say() { printf '\n==> %s\n' "$*"; }
 
@@ -287,7 +287,70 @@ JSON
   rustup default stable || true
 }
 
-MODULES=(eduroam_diag eduroam_senha minecraft tlauncher steam energia boot limpeza xfce idioma corretor_off quicklook bloqueio dev fan estudante)
+# ------------------------------------------------------------------ impressora
+# CUPS + descoberta por mDNS + scanner. Adiciona a primeira impressora IPP achada na
+# rede (sem driver, IPP Everywhere). Rode com a impressora ligada na mesma rede.
+mod_impressao() {
+  say "Serviços de impressão (CUPS, Avahi/mDNS, SANE)"
+  sudo pacman -S --needed --noconfirm cups cups-filters ghostscript cups-pk-helper \
+    system-config-printer avahi nss-mdns sane sane-airscan ipp-usb gutenprint
+  sudo cp -n /etc/nsswitch.conf /etc/nsswitch.conf.bak-mdns
+  grep -q mdns_minimal /etc/nsswitch.conf || sudo sed -i \
+    's/^hosts: mymachines resolve \[!UNAVAIL=return\]/hosts: mymachines mdns_minimal [NOTFOUND=return] resolve [!UNAVAIL=return]/' /etc/nsswitch.conf
+  sudo systemctl enable --now avahi-daemon cups.socket cups.path cups
+  sudo ufw allow 5353/udp comment 'mDNS descoberta de impressoras' 2>/dev/null || true
+  sudo ufw allow 631/tcp comment 'IPP' 2>/dev/null || true
+
+  say "Procurando impressoras IPP na rede"
+  local linha ip nome
+  linha="$(timeout 10 avahi-browse -rtp _ipp._tcp 2>/dev/null | grep '^=;' | grep ';IPv4;' | head -1)"
+  [ -n "$linha" ] || { echo "Nenhuma impressora achada. Ligue-a na mesma rede e rode de novo."; return 0; }
+  ip="$(echo "$linha" | cut -d';' -f8)"
+  nome="$(echo "$linha" | cut -d';' -f4 | sed 's/\\032/_/g; s/[^A-Za-z0-9_]//g')"
+  echo "Achada: $nome em $ip"
+  sudo lpadmin -p "$nome" -E -v "ipp://$ip/ipp/print" -m everywhere -o media-default=iso_a4_210x297mm
+  sudo lpoptions -d "$nome"
+  echo "Pronto. Página de teste: lp -d $nome /usr/share/cups/data/testprint"
+}
+
+# `scanimage -L` com sane-airscan devolveu a página web da HP; este comando fala eSCL direto.
+mod_escanear() {
+  say "Instalando 'escanear' em $BIN"
+  mkdir -p "$BIN"
+  install -m 755 "$HERE/escanear.py" "$BIN/escanear"
+}
+
+# ------------------------------------------------- Claude Desktop: barra do sistema
+# Edita o app.asar do pacote (troca de texto do mesmo tamanho) e guarda backup em
+# ~/.local/share/claude-desktop-backup. Atualizações do app desfazem a edição.
+mod_claude_titlebar() {
+  say "Instalando 'claude-titlebar' em $BIN (use: claude-titlebar on | off | status)"
+  mkdir -p "$BIN"
+  install -m 755 "$HERE/claude-titlebar.py" "$BIN/claude-titlebar"
+  install -m 755 "$HERE/corretor-claude-off.py" "$BIN/corretor-claude-off"
+}
+
+# ------------------------------------------------------------------ Emacs + Doom
+mod_emacs() {
+  say "Emacs + Doom Emacs"
+  sudo pacman -S --needed --noconfirm emacs ripgrep fd git ttf-jetbrains-mono \
+    ttf-nerd-fonts-symbols-mono noto-fonts-emoji shellcheck discount
+  if [ ! -d "$HOME/.config/emacs" ]; then
+    git clone --depth 1 https://github.com/doomemacs/doomemacs "$HOME/.config/emacs"
+    "$HOME/.config/emacs/bin/doom" install --force --config --env --install
+  fi
+  command -v fish >/dev/null && fish -c 'fish_add_path ~/.config/emacs/bin' || true
+  # fonte legível (o monospace padrão, Nimbus Mono PS, fica serrilhado com hintfull)
+  grep -q 'JetBrains Mono' "$HOME/.config/doom/config.el" 2>/dev/null || cat >> "$HOME/.config/doom/config.el" <<'ELISP'
+
+;; Fonte: JetBrains Mono em vez do monospace padrão do sistema
+(setq doom-font (font-spec :family "JetBrains Mono" :size 14)
+      doom-variable-pitch-font (font-spec :family "Liberation Sans" :size 14))
+ELISP
+  "$HOME/.config/emacs/bin/doom" sync
+}
+
+MODULES=(eduroam_diag eduroam_senha minecraft tlauncher steam energia boot limpeza xfce idioma corretor_off quicklook bloqueio dev fan estudante impressao escanear claude_titlebar emacs)
 
 if [ $# -eq 0 ]; then
   echo "Módulos: ${MODULES[*]//_/-}"
