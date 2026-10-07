@@ -219,7 +219,75 @@ mod_dev() {
   rustup default stable || true
 }
 
-MODULES=(eduroam_diag eduroam_senha minecraft tlauncher steam energia boot limpeza xfce idioma corretor_off quicklook bloqueio dev)
+# ---------------------------------------------------------------- ventoinha
+# fan-modo: alterna entre 'sala' (ventoinha parada até ser obrigatório ligar),
+# 'normal' (teto no nível 4) e 'max'. Requer thinkfan configurado no ThinkPad.
+mod_fan() {
+  say "Instalando fan-modo (use: fan-modo sala | normal | max | -w)"
+  mkdir -p "$BIN"
+  install -m 755 "$HERE/fan-modo.py" "$BIN/fan-modo"
+  command -v thinkfan >/dev/null || echo "Aviso: thinkfan não instalado (sudo pacman -S thinkfan)."
+}
+
+# ---------------------------------------------------- computador de estudante
+# Backup do sistema (Timeshift/rsync), firewall, Docker com dados em /home,
+# ferramentas de terminal e grupos do usuário. REINICIE depois: firewall e Docker
+# dependem dos módulos do kernel em uso, e os grupos só valem após novo login.
+mod_estudante() {
+  say "Pacotes: timeshift, ufw, docker, ferramentas de terminal"
+  sudo pacman -Syu --noconfirm --needed timeshift rsync cronie ufw docker docker-compose docker-buildx \
+    tmux fzf ripgrep fd btop tree uv python-pipx nmap radare2 bear ccache neovim
+
+  say "Firewall (ufw): nega entrada, permite saída"
+  sudo ufw default deny incoming
+  sudo ufw default allow outgoing
+  sudo sed -i 's/^ENABLED=.*/ENABLED=yes/' /etc/ufw/ufw.conf
+  sudo systemctl enable --now ufw || echo "ufw sobe após reiniciar (módulos do kernel)"
+
+  say "Docker com dados em /home/docker (evita encher a / de 32 GB)"
+  sudo mkdir -p /etc/docker /home/docker
+  printf '{\n  "data-root": "/home/docker"\n}\n' | sudo tee /etc/docker/daemon.json >/dev/null
+  sudo systemctl enable --now docker || echo "docker sobe após reiniciar"
+
+  say "Grupos do usuário: docker (equivale a root!), uucp (serial/Arduino), wireshark"
+  for g in docker uucp wireshark; do getent group "$g" >/dev/null && sudo usermod -aG "$g" "$USER"; done
+
+  say "Timeshift: snapshots semanais do sistema na partição /home"
+  sudo systemctl enable --now cronie
+  local uuid; uuid="$(findmnt -no UUID /home)"
+  sudo mkdir -p /etc/timeshift
+  sudo tee /etc/timeshift/timeshift.json >/dev/null <<JSON
+{
+  "backup_device_uuid" : "$uuid",
+  "parent_device_uuid" : "",
+  "do_first_run" : "false",
+  "btrfs_mode" : "false",
+  "include_btrfs_home_for_backup" : "false",
+  "include_btrfs_home_for_restore" : "false",
+  "stop_cron_emails" : "true",
+  "schedule_monthly" : "false",
+  "schedule_weekly" : "true",
+  "schedule_daily" : "false",
+  "schedule_hourly" : "false",
+  "schedule_boot" : "false",
+  "count_monthly" : "2",
+  "count_weekly" : "3",
+  "count_daily" : "5",
+  "count_hourly" : "6",
+  "count_boot" : "5",
+  "snapshot_size" : "0",
+  "snapshot_count" : "0",
+  "date_format" : "%Y-%m-%d %H:%M:%S",
+  "exclude" : [],
+  "exclude-apps" : []
+}
+JSON
+  echo "Primeiro snapshot: sudo timeshift --create --comments 'inicial'"
+  echo "Aviso: o snapshot fica no MESMO disco físico; copie seus arquivos para um HD externo ou nuvem."
+  rustup default stable || true
+}
+
+MODULES=(eduroam_diag eduroam_senha minecraft tlauncher steam energia boot limpeza xfce idioma corretor_off quicklook bloqueio dev fan estudante)
 
 if [ $# -eq 0 ]; then
   echo "Módulos: ${MODULES[*]//_/-}"

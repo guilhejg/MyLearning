@@ -30,6 +30,8 @@ Cada módulo é idempotente. Leia o script antes de rodar: ele usa `sudo`.
 | `corretor-off` | Desliga o corretor do Chrome/Claude Desktop e remove o aspell |
 | `quicklook` | Espaço no Thunar abre o Sushi (estilo macOS) |
 | `bloqueio` | Papel de parede na tela de bloqueio + `Ctrl+Alt+Q` |
+| `fan` | Instala o `fan-modo`: modo `sala` (ventoinha parada até 75°C), `normal` (teto no nível 4) e `max` |
+| `estudante` | Timeshift (snapshots do sistema), firewall `ufw`, Docker com dados em `/home`, tmux/fzf/ripgrep/btop/uv, grupos `docker`/`uucp`/`wireshark` e Rust estável. **Reinicie depois** |
 | `dev` | Toolchain de engenharia de computação: C/C++, Python científico, Verilog, AVR/ARM, KiCad, LaTeX, etc. (~2 GB de download) |
 
 ## `eduroam-diag`
@@ -54,3 +56,18 @@ O perfil da eduroam estava sem senha salva, e o NetworkManager falhava com
 - A eduroam (e redes institucionais em geral) pode bloquear/interceptar HTTPS de sites
   de jogos; Steam e TLauncher precisam de outra rede para o primeiro download.
 - Os módulos que editam `/etc` pedem `sudo`; revise antes de rodar.
+
+## `fan-modo`
+
+Alterna o perfil da ventoinha do ThinkPad (usa o `thinkfan`; precisa de `sudo`).
+
+```bash
+fan-modo          # modo atual, temperatura e RPM
+fan-modo sala     # silencioso: parada até ~75°C, só liga se esquentar de verdade
+fan-modo normal   # teto no nível 4, nível 7 só a partir de 85°C
+fan-modo max      # todos os níveis
+fan-modo -w       # acompanha ao vivo
+```
+
+Faz backup de `/etc/thinkfan.conf` na primeira troca. O modo `sala` mantém níveis de
+emergência para a CPU não passar de ~85°C.
